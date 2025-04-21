@@ -16,7 +16,7 @@ class Expression:
 
     def __radd__(self, other):
         if isinstance(other, numbers.Number):
-            return Add((Number(other), self))
+            return Add(Number(other), self)
 
         return NotImplemented
 
@@ -27,7 +27,7 @@ class Expression:
 
     def __rsub__(self, other):
         if isinstance(other, numbers.Number):
-            return Sub((Number(other), self))
+            return Sub(Number(other), self)
         return NotImplemented
 
     def __mul__(self, other):
@@ -37,7 +37,7 @@ class Expression:
 
     def __rmul__(self, other):
         if isinstance(other, numbers.Number):
-            return Mul((Number(other), self))
+            return Mul(Number(other), self)
         return NotImplemented
 
     def __truediv__(self, other):
@@ -47,7 +47,7 @@ class Expression:
 
     def __rtruediv__(self, other):
         if isinstance(other, numbers.Number):
-            return Div((Number(other), self))
+            return Div(Number(other), self)
         return NotImplemented
 
     def __pow__(self, other):
@@ -57,7 +57,7 @@ class Expression:
 
     def __rpow__(self, other):
         if isinstance(other, numbers.Number):
-            return Pow((Number(other), self))
+            return Pow(Number(other), self)
         return NotImplemented
 
 
@@ -68,7 +68,7 @@ class Terminal(Expression):
 
     def __init__(self, value):
         self.value = value
-        super().__init__(value)
+        super().__init__()
 
     def __repr__(self):
         return repr(self.value)
@@ -150,7 +150,7 @@ class Pow(Operator):
 
 
 # Exercise 9.7
-def postvistor(expr, fn, **kwargs):
+def postvisitor(expr, fn, **kwargs):
     """
     Visit an Expression in postorder applying a function to every node.
 
@@ -166,23 +166,24 @@ def postvistor(expr, fn, **kwargs):
      **kwargs: Any additional keyword arguments to be passed to fn.
     """
     stack = []  # use pseudocode in book to implement this
-    visted = {}
+    visited = {}
     stack.append(expr)
     while stack:
         e = stack.pop()
-        unvisted_children = []
+        unvisited_children = []
         for o in e.operands:
-            if o not in visted:
-                unvisted_children.append(o)
+            if o not in visited:
+                unvisited_children.append(o)
 
-        if unvisted_children:
+        if unvisited_children:
             stack.append(e)
-            stack.extend(unvisted_children)
+            for uc in unvisited_children:
+                stack.append(uc)
 
         else:
-            visted[e] = fn(e, *[visted[o] for o in e.operands], **kwargs)
+            visited[e] = fn(e, *[visited[o] for o in e.operands], **kwargs)
 
-    return visted[expr]
+    return visited[expr]
 
 # Exercise 9.8
 
@@ -194,15 +195,15 @@ def differentiate(expr, *o, **kwargs):
 @differentiate.register(Symbol)
 def _(expr, *o, **kwargs):
     """Differentiate a symbol with respect to itself."""
-    if expr in o:
-        return Number(1)
+    if kwargs['var'] == expr.value:
+        return 1.0
     else:
-        return Number(0)
+        return 0.0
 
 @differentiate.register(Number)
 def _(expr, *o, **kwargs):
     """Differentiate a number with respect to anything."""
-    return Number(0)
+    return 0.0
 
 @differentiate.register(Add)
 def _(expr, *o, **kwargs):
@@ -222,11 +223,11 @@ def _(expr, *o, **kwargs):
 @differentiate.register(Div)
 def _(expr, *o, **kwargs):
     """Differentiate a division operator."""
-    return (o[0] * expr.operands[1] - o[0] * expr.operands[1]) / \
+    return (o[0] * expr.operands[1] - expr.operands[0] * o[1]) / \
            (expr.operands[1] ** 2)  # quotient rule
 
 @differentiate.register(Pow)
 def _(expr, *o, **kwargs):
     """Differentiate an exponentiation operator."""
-    return expr.operands[0] ** expr.operands[1] * \
-           (o[0] * expr.operands[1] / expr.operands[0])  # chain rule
+    return expr.operands[1] * \
+           (expr.operands[0] ** (expr.operands[1] - 1)) * o[0]  # chain rule

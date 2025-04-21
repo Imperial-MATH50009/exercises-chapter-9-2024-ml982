@@ -17,7 +17,6 @@ class Expression:
     def __radd__(self, other):
         if isinstance(other, numbers.Number):
             return Add(Number(other), self)
-
         return NotImplemented
 
     def __sub__(self, other):
@@ -61,6 +60,7 @@ class Expression:
         return NotImplemented
 
 
+
 class Terminal(Expression):
     """A terminal in an expression."""
 
@@ -83,7 +83,7 @@ class Number(Terminal):
     def __init__(self, value):
         if not isinstance(value, numbers.Number):
             raise TypeError("Number must be a number")
-        super().__init__(value)  # should be done
+        super().__init__(value)
 
 
 class Symbol(Terminal):
@@ -92,8 +92,7 @@ class Symbol(Terminal):
     def __init__(self, value):
         if not isinstance(value, str):
             raise TypeError("Symbol must be a string")
-        super().__init__(value)  # should be done
-
+        super().__init__(value)
 
 class Operator(Expression):
     """An operator in an expression."""
@@ -110,7 +109,8 @@ class Operator(Expression):
                 return str(expr)
 
         return " ".join((brackets(self.operands[0]),
-                        self.symbol, brackets(self.operands[1])))
+                        self.symbol, 
+                        brackets(self.operands[1])))
         # need to implement this
 
 
@@ -192,18 +192,16 @@ def differentiate(expr, *o, **kwargs):
     """Differentiate an expression with respect to a symbol."""
     raise NotImplementedError(f"Cannot differentiate  a {type(expr)}.__name__")
 
-@differentiate.register(Symbol)
-def _(expr, *o, **kwargs):
-    """Differentiate a symbol with respect to itself."""
-    if kwargs['var'] == expr.value:
-        return 1.0
-    else:
-        return 0.0
-
 @differentiate.register(Number)
 def _(expr, *o, **kwargs):
     """Differentiate a number with respect to anything."""
     return 0.0
+
+@differentiate.register(Symbol)
+def _(expr, *o, **kwargs):
+    """Differentiate a symbol with respect to itself."""
+    return 1.0 if kwargs['var'] == expr.value else 0.0
+
 
 @differentiate.register(Add)
 def _(expr, *o, **kwargs):
@@ -218,7 +216,7 @@ def _(expr, *o, **kwargs):
 @differentiate.register(Mul)
 def _(expr, *o, **kwargs):
     """Differentiate a multiplication operator."""
-    return o[0] * expr.operands[1] + o[0] * expr.operands[1]  # product rule
+    return o[0] * expr.operands[1] + o[1] * expr.operands[0]  # product rule
 
 @differentiate.register(Div)
 def _(expr, *o, **kwargs):
